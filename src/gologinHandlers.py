@@ -15,6 +15,7 @@ class BaseGologinError(Exception):
         self.details = details or {}
 
 
+
 class GologinHandler:
     def __init__(self, proxy_country: str, profile_id: str = None, proxy_ip: str = None):
         token = Config.GL_API_TOKEN
@@ -24,7 +25,7 @@ class GologinHandler:
         self.gologin = GoLogin({
             'token': token,
             # "executablePath": "/orbita/orbita-browser/chrome"
-            # 'extra_params': ['--headless']
+            # 'extra_params': ['--headless=new', '--no-sandbox']
         })
 
         self.profile_id = profile_id
@@ -38,6 +39,7 @@ class GologinHandler:
         self.gologin.setProfileId(self.profile_id)
         proxyConfig = build_brightdata_proxy(self.proxy_country, self.proxy_ip)
         self.change_gologin_proxy(proxyConfig)
+
 
     def connect_gologin_session(self):
         try:
@@ -58,12 +60,14 @@ class GologinHandler:
         except Exception as e:
             raise BaseGologinError("Gologin Connection Error", e)
 
+
     def stop_gologin_session(self):
         try:
             self.gologin.stop()
             print('✅ GoLogin session stopped successfully')
         except Exception as e:
             raise BaseGologinError("GologinStop Connection Error", e)
+
 
     def create_gologin_profile(self):
         try:
@@ -78,7 +82,7 @@ class GologinHandler:
                 #     "platform": "Linux x86_64"
                 # }
                 "os": "mac",
-                "name": "testing-local",
+                "name": "testing-local2",
                 "autoLang": False,
                 "navigator": {
                     "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.7151.56 Safari/537.36",
@@ -109,8 +113,10 @@ class GologinHandler:
 
             print('✅ GoLogin profile created successfully')
 
+
         except Exception as e:
             raise BaseGologinError("GologinProfileCreation Error", e)
+        
 
     def change_gologin_proxy(self, proxyConfig):
         try:
@@ -118,3 +124,8 @@ class GologinHandler:
             print('✅ GoLogin proxy Alloted successfully')
         except Exception as e:
             raise BaseGologinError("GologinProxyAllot Error", e)
+
+
+    def download_cookies(self):
+        cookies = self.gologin.downloadCookies()
+        print("cookies", cookies)

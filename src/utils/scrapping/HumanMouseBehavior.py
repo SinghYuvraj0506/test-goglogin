@@ -6,7 +6,7 @@ from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import TimeoutException, ElementNotInteractableException
+from selenium.common.exceptions import TimeoutException, ElementNotInteractableException, StaleElementReferenceException
 
 
 class HumanMouseBehavior:
@@ -57,12 +57,9 @@ class HumanMouseBehavior:
         """
         
         try:
-            self.focus_on_screen()
-
             # Wait for element to be present and visible
             wait = WebDriverWait(self.driver, 10)
             element = wait.until(EC.element_to_be_clickable(element))
-            
             # Get element location and size
             element_rect = element.rect
             
@@ -106,8 +103,6 @@ class HumanMouseBehavior:
                     
                     offset_x_calc = x - element_center_x
                     offset_y_calc = y - element_center_y
-
-                    print(offset_x_calc,offset_y_calc)
                     
                     # Move to point
                     self.action_chains.move_to_element_with_offset(element, offset_x_calc, offset_y_calc)
@@ -119,7 +114,6 @@ class HumanMouseBehavior:
                     
                     # Reset action chains
                     self.action_chains = ActionChains(self.driver)
-
 
             # Minimal hover time
             if hover_duration is None:
@@ -145,22 +139,16 @@ class HumanMouseBehavior:
             
             return True
             
+        except (StaleElementReferenceException) as e:
+            print(f"Stale error: {e}")
+            return False
         except (TimeoutException, ElementNotInteractableException) as e:
-            print(f"Error moving to element: {e}")
+            print(f"Element not found, Timeout Error: {e}")
             return False
         except Exception as e:
             print(f"Unexpected error: {e}")
             return False
     
-
-    def focus_on_screen(self):
-        try:
-            # Click somewhere in the center of the screen to focus
-            self.action_chains.move_by_offset(100, 100).click().perform()
-            self.action_chains.move_by_offset(-100, -100).perform()  
-            print("🖱️ Focused on screen.")
-        except Exception as e:
-            print("⚠️ Failed to focus screen:", e)
 
 
     def random_mouse_jitter(self, duration=None, intensity='medium'):
@@ -221,8 +209,6 @@ class HumanMouseBehavior:
             scroll_distance: Distance in pixels for each scroll.
             scroll_pause: Average pause between scrolls in seconds.
         """
-         
-        self.focus_on_screen()
         
         if amount is None:
             amount = random.randint(200, 800)
@@ -240,7 +226,6 @@ class HumanMouseBehavior:
             # Small delay between scroll steps
             time.sleep(random.uniform(0.4, 0.9))
     
-
 
     def quick_move_to_element(self, element, click=True):
         """

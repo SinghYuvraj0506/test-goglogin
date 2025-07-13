@@ -3,10 +3,11 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException, NoSuchElementException
+from utils.scrapping.HumanMouseBehavior import HumanMouseBehavior
+from utils.scrapping.HumanTypingBehavior import HumanTypingBehavior
+from config import Config
 from scripts.twofactorCheck import handle_two_factor_authentication
-from utils.scrappingHelpers import simulate_human_typing
-from utils.helpers import get_config
-from utils.blockHandlers import check_and_handle_dialogs, handle_save_info_dialog
+import time
 
 def insta_login(driver):
     """
@@ -18,46 +19,42 @@ def insta_login(driver):
     Returns:
         bool: True if login is successful, False otherwise.
     """
+
     try:
-        # Step 1: Go to Instagram login page
-        driver.get("https://www.instagram.com/?hl=en")
+        human_mouse = HumanMouseBehavior(driver)
+        human_typing = HumanTypingBehavior(driver)
 
-        # check for some dialogs
-        check_and_handle_dialogs(driver)
-
-        # Use WebDriverWait to wait for elements to be present
+        driver.get("https://www.instagram.com")
         wait = WebDriverWait(driver, 15)
 
-        # Step 2: Fill in credentials from environment variables
-        config = get_config()
-        username = config.get("insta_username")
-        password = config.get("insta_password")
+        human_mouse.random_mouse_jitter(4)
+
+        username = Config.INSTA_USERNAME
+        password = Config.INSTA_PASSWORD
 
         username_input = wait.until(EC.presence_of_element_located((By.NAME, "username")))
         password_input = wait.until(EC.presence_of_element_located((By.NAME, "password")))
 
-        simulate_human_typing(username_input, username)
-        simulate_human_typing(password_input, password)
+        human_mouse.human_like_move_to_element(element=username_input, click=True)
+        human_typing.human_like_type(element=username_input,text=username, typing_speed="normal")
+
+        time.sleep(2)
+
+        human_mouse.human_like_move_to_element(element=password_input, click=True)
+        human_typing.human_like_type(element=password_input,text=password, typing_speed="slow")
+
+        time.sleep(3)
         
         password_input.send_keys(Keys.RETURN)
+
+        time.sleep(4)
 
         # Handle 2FA if required
         if not handle_two_factor_authentication(driver):
             return False
-        
-        # Handle Save info dialog
-        if not handle_save_info_dialog(driver):
-            return False
-        
-        # check for some dialogs
-        check_and_handle_dialogs(driver)
 
-        # Step 3: Wait for successful login and handle potential pop-ups
-        # Wait for the home feed to load by checking for the profile icon
         wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "a[href*='/{}/']".format(username))))
-        
         print("✅ Login successful!")
-
         return True
 
     except TimeoutException as e:

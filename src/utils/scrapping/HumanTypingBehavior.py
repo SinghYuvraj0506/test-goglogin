@@ -1,13 +1,12 @@
 import random
 import time
 import string
-from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import TimeoutException, ElementNotInteractableException
+from selenium.common.exceptions import TimeoutException, ElementNotInteractableException, StaleElementReferenceException
 
 
 class HumanTypingBehavior:
@@ -46,7 +45,18 @@ class HumanTypingBehavior:
             'w': ['q', 'e', 's', 'a'],
             'x': ['z', 's', 'd', 'c'],
             'y': ['t', 'u', 'h', 'g'],
-            'z': ['a', 's', 'x']
+            'z': ['a', 's', 'x'],
+            # Add number key mappings for better 2FA support
+            '0': ['9', 'o'],
+            '1': ['2', 'q'],
+            '2': ['1', '3', 'w'],
+            '3': ['2', '4', 'e'],
+            '4': ['3', '5', 'r'],
+            '5': ['4', '6', 't'],
+            '6': ['5', '7', 'y'],
+            '7': ['6', '8', 'u'],
+            '8': ['7', '9', 'i'],
+            '9': ['8', '0', 'o']
         }
         
         # Common typing patterns
@@ -103,6 +113,7 @@ class HumanTypingBehavior:
     def get_typo_char(self, intended_char):
         """
         Get a realistic typo character based on keyboard layout
+        FIXED: Better handling of skip typos and number keys
         """
         char_lower = intended_char.lower()
         
@@ -112,13 +123,18 @@ class HumanTypingBehavior:
                 return random.choice(self.typo_mapping[char_lower])
             else:
                 # 20% chance for other types of typos
-                typo_type = random.choice(['double', 'skip', 'case'])
+                typo_type = random.choice(['double', 'case'])  # Removed 'skip' to avoid empty string issues
                 if typo_type == 'double':
                     return intended_char + intended_char
-                elif typo_type == 'skip':
-                    return ''  # Skip the character
-                elif typo_type == 'case':
+                elif typo_type == 'case' and intended_char.isalpha():
                     return intended_char.swapcase()
+                else:
+                    # Fallback to adjacent key if case swap isn't applicable
+                    return random.choice(self.typo_mapping[char_lower])
+        
+        # For digits, ensure we return a digit
+        if intended_char.isdigit():
+            return str(random.randint(0, 9))
         
         # Default random typo
         return random.choice(string.ascii_lowercase)
@@ -138,9 +154,11 @@ class HumanTypingBehavior:
         # Increase probability after punctuation
         return random.random() < base_prob
     
+
     def human_like_type(self, element, text, clear_field=True, typing_speed='normal'):
         """
         Type text into element with human-like behavior
+        FIXED: Better handling of typos and corrections
         
         Args:
             element: WebElement to type into
@@ -154,15 +172,15 @@ class HumanTypingBehavior:
         try:
             # Wait for element to be present and clickable
             wait = WebDriverWait(self.driver, 10)
-            element = wait.until(EC.element_to_be_clickable(element))
+            target = wait.until(EC.element_to_be_clickable(element))
             
             # Click on the element first
-            element.click()
+            target.click()
             time.sleep(random.uniform(0.1, 0.3))
             
             # Clear field if requested
             if clear_field:
-                element.clear()
+                target.clear()
                 time.sleep(random.uniform(0.05, 0.15))
             
             # Adjust base typing speed
@@ -177,59 +195,64 @@ class HumanTypingBehavior:
             i = 0
             
             while i < len(text):
-                char = text[i]
-                previous_char = typed_text[-1] if typed_text else None
-                
-                # Determine if we should make a typo
-                if self.should_make_typo(char, i, len(text)):
-                    # Make a typo
-                    typo_char = self.get_typo_char(char)
+                try:
+                    char = text[i]
+                    previous_char = typed_text[-1] if typed_text else None
                     
-                    if typo_char:  # If not empty (skip typo)
-                        # Type the typo
-                        element.send_keys(typo_char)
-                        typed_text += typo_char
+                    # Determine if we should make a typo
+                    if self.should_make_typo(char, i, len(text)):
+                        # Make a typo
+                        typo_char = self.get_typo_char(char)
                         
-                        # Pause before realizing mistake
-                        correction_delay = random.uniform(0.3, 1.2)
-                        time.sleep(correction_delay)
-                        
-                        # Correct the typo
-                        if len(typo_char) > 1:  # Double character typo
-                            element.send_keys(Keys.BACKSPACE * len(typo_char))
-                            typed_text = typed_text[:-len(typo_char)]
-                        else:
-                            element.send_keys(Keys.BACKSPACE)
-                            typed_text = typed_text[:-1]
-                        
-                        # Small pause after correction
-                        time.sleep(random.uniform(0.1, 0.3))
-                
-                # Type the correct character
-                element.send_keys(char)
-                typed_text += char
-                
-                # Calculate typing delay
-                typing_delay = self.get_typing_speed(char, previous_char) * speed_multiplier
-                
-                # Add some random variation
-                typing_delay += random.uniform(-0.02, 0.02)
-                
-                # Ensure minimum delay
-                typing_delay = max(0.01, typing_delay)
-                
-                time.sleep(typing_delay)
-                
-                # Random pauses (thinking/reading)
-                if self.should_pause(i, len(text)):
-                    pause_duration = random.uniform(0.5, 2.0)
-                    time.sleep(pause_duration)
-                
-                i += 1
+                        if typo_char and typo_char.strip(): 
+                            # Type the typo
+                            target.send_keys(typo_char)
+                            typed_text += typo_char
+                            
+                            # Pause before realizing mistake
+                            correction_delay = random.uniform(0.3, 1.2)
+                            time.sleep(correction_delay)
+                            
+                            # Correct the typo
+                            backspace_count = len(typo_char)
+                            for _ in range(backspace_count):
+                                target.send_keys(Keys.BACKSPACE)
+                            
+                            # Update typed_text
+                            typed_text = typed_text[:-backspace_count]
+                            
+                            # Small pause after correction
+                            time.sleep(random.uniform(0.1, 0.3))
+                    
+
+                    # Type the correct character
+                    target.send_keys(char)
+                    typed_text += char
+                    
+                    # Calculate typing delay
+                    typing_delay = self.get_typing_speed(char, previous_char) * speed_multiplier
+                    
+                    # Add some random variation
+                    typing_delay += random.uniform(-0.02, 0.02)
+                    
+                    # Ensure minimum delay
+                    typing_delay = max(0.01, typing_delay)
+                    
+                    time.sleep(typing_delay)
+                    
+                    # Random pauses (thinking/reading) - reduce for short numeric inputs like 2FA
+                    if len(text) > 6 and self.should_pause(i, len(text)):
+                        pause_duration = random.uniform(0.5, 2.0)
+                        time.sleep(pause_duration)
+                    
+                    i += 1
+                except StaleElementReferenceException as e:
+                    print("Stale error occured, resetting the element")
+                    target = wait.until(EC.element_to_be_clickable(element))
+                    continue
             
             # Final pause after typing
             time.sleep(random.uniform(0.2, 0.8))
-            
             return True
             
         except (TimeoutException, ElementNotInteractableException) as e:
@@ -238,7 +261,7 @@ class HumanTypingBehavior:
         except Exception as e:
             print(f"Unexpected error while typing: {e}")
             return False
-    
+
 
     def simulate_form_filling(self, form_data, delay_between_fields=None):
         """
@@ -300,45 +323,3 @@ class HumanTypingBehavior:
         if submit:
             time.sleep(random.uniform(0.3, 1.0))
             search_element.send_keys(Keys.RETURN)
-
-
-# # Usage example
-# def example_usage():
-#     """
-#     Example of how to use the HumanTypingBehavior class
-#     """
-#     # Initialize your driver (replace with your gologin setup)
-#     driver = webdriver.Chrome()  # or your gologin driver
-    
-#     try:
-#         # Navigate to Instagram
-#         driver.get("https://www.instagram.com")
-        
-#         # Initialize human typing behavior
-#         human_typing = HumanTypingBehavior(driver)
-        
-#         # Example 1: Type into username field
-#         username_field = driver.find_element(By.NAME, "username")
-#         human_typing.human_like_type(username_field, "your_username", typing_speed='normal')
-        
-#         # Example 2: Type into password field
-#         password_field = driver.find_element(By.NAME, "password")
-#         human_typing.human_like_type(password_field, "your_password", typing_speed='slow')
-        
-#         # Example 3: Fill multiple form fields
-#         form_data = {
-#             (By.NAME, "username"): "test_user",
-#             (By.NAME, "password"): "test_password"
-#         }
-#         human_typing.simulate_form_filling(form_data)
-        
-#         # Example 4: Search behavior
-#         search_field = driver.find_element(By.XPATH, "//input[@placeholder='Search']")
-#         human_typing.simulate_search_behavior(search_field, "nature photography")
-        
-#     finally:
-#         driver.quit()
-
-
-# if __name__ == "__main__":
-#     example_usage()

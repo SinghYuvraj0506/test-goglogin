@@ -8,6 +8,7 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.action_chains import ActionChains
 import json
 from datetime import datetime
+from utils.scrapping.HumanMouseBehavior import HumanMouseBehavior
 
 
 class ScreenObserver:
@@ -22,7 +23,8 @@ class ScreenObserver:
         self.current_url = ""
         self.is_monitoring = False
         self.monitor_thread = None
-        self.check_interval = 0.5  # Check every 500ms
+        self.check_interval = 0.5
+        self.human_mouse = HumanMouseBehavior(driver)
         
         # Setup logging
         logging.basicConfig(level=log_level, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -30,7 +32,6 @@ class ScreenObserver:
         
         # Dialog detection patterns
         self.dialog_patterns = {
-            'instagram': {
                 'login_required': [
                     "//div[contains(text(), 'Log in to continue')]",
                     "//div[contains(text(), 'You must log in to continue')]",
@@ -45,15 +46,6 @@ class ScreenObserver:
                 'notification_popup': [
                     "//div[contains(text(), 'notifications')]",
                     "//button[contains(text(), 'Not Now')]",
-                ],
-                'save_info_onetap': [
-                    "//button[contains(text(), 'Save Info')]",
-                    "//button[contains(text(), 'Not Now')]",
-                ],
-                'age_verification': [
-                    "//button[contains(text(), 'I am 18 or older')]",
-                    "//button[contains(text(), 'Continue')]",
-                    "//select[@name='birthday_month']"
                 ],
                 'rate_limit': [
                     "//div[contains(text(), 'Try again later')]",
@@ -76,32 +68,7 @@ class ScreenObserver:
                     "//div[contains(text(), 'account has been')]",
                     "//div[contains(text(), 'suspended')]",
                     "//div[contains(text(), 'disabled')]"
-                ],
-                'challenge_required': [
-                    "//div[contains(text(), 'challenge')]",
-                    "//div[contains(text(), 'verify')]",
-                    "//div[contains(text(), 'confirm')]",
-                    "//input[@name='email']",
-                    "//input[@name='phone']"
                 ]
-            },
-            'general': {
-                'popup_modal': [
-                    "//div[@role='dialog']",
-                    "//div[contains(@class, 'modal')]",
-                    "//div[contains(@class, 'popup')]"
-                ],
-                'close_buttons': [
-                    "//button[@aria-label='Close']",
-                    "//button[contains(@class, 'close')]",
-                    "//span[contains(@class, 'close')]",
-                    "//button[text()='×']"
-                ],
-                'overlay': [
-                    "//div[contains(@class, 'overlay')]",
-                    "//div[contains(@class, 'backdrop')]"
-                ]
-            }
         }
         
         # Action handlers for different dialog types
@@ -109,22 +76,15 @@ class ScreenObserver:
             'login_required': self.handle_login_required,
             'cookies_consent': self.handle_cookies_consent,
             'notification_popup': self.handle_notification_popup,
-            'save_info_onetap': self.handle_save_info_onetap,
-            'age_verification': self.handle_age_verification,
             'rate_limit': self.handle_rate_limit,
             'captcha': self.handle_captcha,
             'suspicious_activity': self.handle_suspicious_activity,
-            'account_suspended': self.handle_account_suspended,
-            'challenge_required': self.handle_challenge_required,
-            'popup_modal': self.handle_generic_popup,
-            'close_buttons': self.handle_close_buttons,
-            'overlay': self.handle_overlay
+            'account_suspended': self.handle_account_suspended
         }
         
         # URL change handlers
         self.url_change_handlers = {
             'blocked_page': self.handle_blocked_page,
-            'error_page': self.handle_error_page,
             'onetap_save_info': self.handle_onetap_save_info,
             'challenge_redirect': self.handle_challenge_redirect
         }
@@ -135,6 +95,7 @@ class ScreenObserver:
         except:
             self.current_url = ""
     
+
     def start_monitoring(self):
         """Start the monitoring thread"""
         if not self.is_monitoring:
@@ -196,7 +157,7 @@ class ScreenObserver:
         """Check for dialogs and handle them"""
         try:
             # Check Instagram-specific dialogs first
-            for dialog_type, patterns in self.dialog_patterns['instagram'].items():
+            for dialog_type, patterns in self.dialog_patterns.items():
                 if self._detect_dialog(patterns):
                     self.logger.info(f"Detected dialog: {dialog_type}")
                     success = self._handle_dialog(dialog_type)
@@ -206,18 +167,6 @@ class ScreenObserver:
                         self._request_manual_intervention(dialog_type, patterns)
                     
                     return  # Handle one dialog at a time
-            
-            # Check general dialogs
-            for dialog_type, patterns in self.dialog_patterns['general'].items():
-                if self._detect_dialog(patterns):
-                    self.logger.info(f"Detected general dialog: {dialog_type}")
-                    success = self._handle_dialog(dialog_type)
-                    
-                    if not success:
-                        self.logger.warning(f"Failed to handle general dialog: {dialog_type}")
-                        self._request_manual_intervention(dialog_type, patterns)
-                    
-                    return
                     
         except Exception as e:
             self.logger.error(f"Error checking dialogs: {e}")
@@ -256,8 +205,7 @@ class ScreenObserver:
         # Check for blocked/error pages
         elif 'blocked' in new_url or 'error' in new_url or '404' in new_url:
             self.url_change_handlers['blocked_page'](old_url, new_url)
-        
-    
+           
     def _request_manual_intervention(self, dialog_type, patterns):
         """Request manual intervention for unhandled dialogs"""
         error_msg = f"""
@@ -283,32 +231,19 @@ class ScreenObserver:
                 'message': error_msg
             })
     
-    # Dialog Handler Methods
+
+    # Dialog Handler Methods -------------
     def handle_login_required(self):
         """Handle login required dialogs"""
-        try:
-            # Try to find and click login button
-            login_selectors = [
-                "//button[contains(text(), 'Log In')]",
-                "//button[contains(text(), 'Sign In')]"
-            ]
-            
-            for selector in login_selectors:
-                try:
-                    element = self.driver.find_element(By.XPATH, selector)
-                    if element.is_displayed():
-                        element.click()
-                        time.sleep(2)
-                        return True
-                except:
-                    continue
-            
-            return False
-            
-        except Exception as e:
-            self.logger.error(f"Error handling login required: {e}")
-            return False
-    
+        # Try to find and click login button
+        if self.callback_function:
+            self.callback_function('relogin', {
+                'timestamp': datetime.now().isoformat(),
+                'message': 'Relogin Dialog Detected'
+            })
+        
+        return True
+             
     def handle_cookies_consent(self):
         """Handle cookies consent dialogs"""
         try:
@@ -360,36 +295,6 @@ class ScreenObserver:
             
         except Exception as e:
             self.logger.error(f"Error handling notification popup: {e}")
-            return False
-    
-    def handle_save_info_onetap(self):
-        """Handle save info dialog at accounts/onetap"""
-        try:
-            # Look for button inside main[role='main']
-            button_selector = "//main[@role='main']//button[@type='button']"
-            
-            element = self.driver.find_element(By.XPATH, button_selector)
-            if element.is_displayed():
-                element.click()
-                time.sleep(1)
-                self.logger.info("Successfully clicked save info button at onetap")
-                return True
-            
-            return False
-            
-        except Exception as e:
-            self.logger.error(f"Error handling save info onetap: {e}")
-            return False
-    
-    def handle_age_verification(self):
-        """Handle age verification dialogs"""
-        try:
-            # This typically requires manual intervention
-            self.logger.warning("Age verification detected - requires manual intervention")
-            return False
-            
-        except Exception as e:
-            self.logger.error(f"Error handling age verification: {e}")
             return False
     
     def handle_rate_limit(self):
@@ -454,91 +359,34 @@ class ScreenObserver:
             self.logger.error(f"Error handling account suspended: {e}")
             return False
     
-    def handle_challenge_required(self):
-        """Handle challenge required dialogs (excluding two-factor)"""
-        try:
-            self.logger.warning("Challenge required detected - this will be handled by your scripts")
-            
-            # Don't attempt to handle automatically since you mentioned 
-            # you'll handle challenges in your scripts
-            return False
-            
-        except Exception as e:
-            self.logger.error(f"Error handling challenge required: {e}")
-            return False
-    
-    def handle_generic_popup(self):
-        """Handle generic popup dialogs"""
-        try:
-            # Try to find and click close button
-            close_selectors = [
-                "//button[@aria-label='Close']",
-                "//button[contains(@class, 'close')]",
-                "//span[contains(@class, 'close')]",
-                "//button[text()='×']"
-            ]
-            
-            for selector in close_selectors:
-                try:
-                    element = self.driver.find_element(By.XPATH, selector)
-                    if element.is_displayed():
-                        element.click()
-                        time.sleep(1)
-                        return True
-                except:
-                    continue
-            
-            # Try pressing ESC key
-            ActionChains(self.driver).send_keys(Keys.ESCAPE).perform()
-            time.sleep(1)
-            
-            return True
-            
-        except Exception as e:
-            self.logger.error(f"Error handling generic popup: {e}")
-            return False
-    
-    def handle_close_buttons(self):
-        """Handle close buttons"""
-        return self.handle_generic_popup()
-    
-    def handle_overlay(self):
-        """Handle overlay dialogs"""
-        try:
-            # Try clicking on overlay to dismiss
-            overlay_selectors = [
-                "//div[contains(@class, 'overlay')]",
-                "//div[contains(@class, 'backdrop')]"
-            ]
-            
-            for selector in overlay_selectors:
-                try:
-                    element = self.driver.find_element(By.XPATH, selector)
-                    if element.is_displayed():
-                        element.click()
-                        time.sleep(1)
-                        return True
-                except:
-                    continue
-            
-            return False
-            
-        except Exception as e:
-            self.logger.error(f"Error handling overlay: {e}")
-            return False
-    
-    # URL Change Handlers
-    
+
+    # URL Change Handlers ------------------------------------
     def handle_onetap_save_info(self, old_url, new_url):
         """Handle onetap save info page redirect"""
         self.logger.info(f"Onetap save info page detected: {old_url} -> {new_url}")
-        # The dialog handler will automatically handle the button click
-        # Just log the event here
-    
+        try:
+            button_selector = "//main[@role='main']//button[@type='button']"
+            
+            element = self.driver.find_element(By.XPATH, button_selector)
+
+            self.human_mouse.human_like_move_to_element(element, click=True)
+            time.sleep(2)
+            self.logger.info("Successfully clicked save info button at onetap")
+
+        except Exception as e:
+            self.logger.error(f"Error handling save info onetap: {e}")
+
+            if self.callback_function:
+                self.callback_function('save_info_failed', {
+                    'old_url': old_url,
+                    'new_url': new_url,
+                    'timestamp': datetime.now().isoformat(),
+                    'message': 'Closing Save Info Dialog Failed'
+                })
+
     def handle_challenge_redirect(self, old_url, new_url):
         """Handle challenge redirect (excluding two-factor)"""
         self.logger.warning(f"Challenge redirect detected: {old_url} -> {new_url}")
-        self.logger.info("Challenge handling will be done by your scripts")
         
         # Call callback to notify about challenge
         if self.callback_function:
@@ -551,23 +399,14 @@ class ScreenObserver:
     
     def handle_blocked_page(self, old_url, new_url):
         """Handle blocked page"""
-        self.logger.warning(f"Blocked page detected: {old_url} -> {new_url}")
+        self.logger.warning(f"Blocked/Error page detected: {old_url} -> {new_url}")
         # Try to go back or refresh
         try:
             self.driver.back()
             time.sleep(2)
         except:
             pass
-    
-    def handle_error_page(self, old_url, new_url):
-        """Handle error page"""
-        self.logger.warning(f"Error page detected: {old_url} -> {new_url}")
-        # Try to refresh
-        try:
-            self.driver.refresh()
-            time.sleep(3)
-        except:
-            pass
+
     
 
 
