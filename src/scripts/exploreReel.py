@@ -31,6 +31,7 @@ def explore_reels_randomly(driver, count=5, min_watch=4, max_watch=12):
     human_mouse.random_mouse_jitter(duration=5)
     time.sleep(2)
 
+    human_mouse.focus_on_screen()
 
     for i in range(count):
         print(f"\n▶️ Watching Reel {i+1}/{count}")

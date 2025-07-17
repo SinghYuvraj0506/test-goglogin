@@ -14,8 +14,8 @@ class Settings(BaseSettings):
     PROXY_IP: Optional[str] = None
 
     model_config = SettingsConfigDict(
-        env_file="../.env",
-        extra="forbid"
+        # env_file="../.env",
+        # extra="forbid"
     )
 
 Config = Settings()

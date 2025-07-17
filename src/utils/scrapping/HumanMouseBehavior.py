@@ -185,8 +185,6 @@ class HumanMouseBehavior:
             x_offset = random.randint(*move_range)
             y_offset = random.randint(*move_range)
 
-            print(x_offset,y_offset)
-            
             # Move relative to body element
             self.action_chains.move_to_element_with_offset(body, x_offset, y_offset)
             self.action_chains.perform()
@@ -264,3 +262,12 @@ class HumanMouseBehavior:
             print(f"Error in quick move: {e}")
             return False
 
+
+    def focus_on_screen(self):
+        try:
+            # Click somewhere in the center of the screen to focus
+            self.action_chains.move_by_offset(100, 100).click().perform()
+            self.action_chains.move_by_offset(-100, -100).perform()  
+            print("🖱️ Focused on screen.")
+        except Exception as e:
+            print("⚠️ Failed to focus screen:", e)

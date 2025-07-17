@@ -2,20 +2,24 @@ import time
 import random
 from selenium.webdriver.common.by import By
 from selenium.common.exceptions import NoSuchElementException, TimeoutException
-from utils.scrappingHelpers import simulate_human_scrolling
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from utils.scrapping.HumanMouseBehavior import HumanMouseBehavior
+from utils.scrapping.BasicUtils import BasicUtils
 
 def browse_explore_page(driver):
-    print("🧭 Navigating to Instagram Explore Page...")
-    driver.get("https://www.instagram.com/explore/")
-    time.sleep(4)
-
-    # Step 1: Simulate human scrolling on explore
-    simulate_human_scrolling(driver, scroll_count=random.randint(4, 7), scroll_distance=500, scroll_pause=2)
+    basicUtils = BasicUtils(driver)
+    human_mouse = HumanMouseBehavior(driver)
 
     try:
-        # Step 2: Find post links
+        print("🧭 Navigating to Instagram Explore Page...")
+        basicUtils.click_anchor_by_href("/explore/")
+        
+        time.sleep(5)
+        human_mouse.random_mouse_jitter(duration=2)
+        human_mouse.natural_scroll(direction="down", amount=random.randint(200, 600))
+        human_mouse.random_mouse_jitter(duration=2)
+
         # Find the main content area
         main_element = WebDriverWait(driver, 10).until(
             EC.presence_of_element_located((By.CSS_SELECTOR, "main[role='main']"))
@@ -37,23 +41,24 @@ def browse_explore_page(driver):
 
                 # Click to open
                 post.click()
-                time.sleep(random.uniform(3.5, 6.5))  # Simulate reading/viewing
+                time.sleep(random.uniform(2.5, 4.5))  # Simulate reading/viewing
+                human_mouse.random_mouse_jitter(duration=2)
 
                 print("🔙 Going back to explore")
                 driver.back()
                 time.sleep(random.uniform(2.5, 4))
 
                 # Scroll again after viewing a post
-                simulate_human_scrolling(driver, scroll_count=random.randint(1, 3), scroll_distance=400, scroll_pause=1.5)
+                human_mouse.random_mouse_jitter(duration=2)
+                human_mouse.natural_scroll(direction="down", amount=random.randint(200, 600))
 
             except Exception as e:
                 print(f"⚠️ Failed to open/view post: {e}")
                 driver.back()
                 time.sleep(2)
 
-    except NoSuchElementException:
+    except NoSuchElementException or TimeoutException:
         print("❌ No posts found on explore page.")
 
     print("🏠 Returning to Instagram home page.")
     driver.get("https://www.instagram.com/")
-    time.sleep(3)

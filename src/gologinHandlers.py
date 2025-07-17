@@ -5,6 +5,7 @@ from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
 from config import Config
 from utils.basicHelpers import build_brightdata_proxy
+import traceback
 
 class BaseGologinError(Exception):
     """Base exception for gologin related error"""
@@ -15,19 +16,26 @@ class BaseGologinError(Exception):
         self.details = details or {}
 
 
-
 class GologinHandler:
     def __init__(self, proxy_country: str, profile_id: str = None, proxy_ip: str = None):
         token = Config.GL_API_TOKEN
         if not token:
             raise BaseGologinError("Gologin Token not found")
-
-        self.gologin = GoLogin({
+        
+        params = {
             'token': token,
-            # "executablePath": "/orbita/orbita-browser/chrome"
-            # 'extra_params': ['--headless=new', '--no-sandbox']
-        })
+            'extra_params': [
+                '--no-sandbox',
+                '--headless',
+                # '--disable-dev-shm-usage',
+                # '--disable-gpu',
+                # '--disable-web-security',
+                # '--disable-features=VizDisplayCompositor',
+                # '--remote-debugging-port=9222'
+            ]
+        }
 
+        self.gologin = GoLogin(params)
         self.profile_id = profile_id
         self.proxy_country = proxy_country
         self.proxy_ip = proxy_ip
@@ -39,7 +47,6 @@ class GologinHandler:
         self.gologin.setProfileId(self.profile_id)
         proxyConfig = build_brightdata_proxy(self.proxy_country, self.proxy_ip)
         self.change_gologin_proxy(proxyConfig)
-
 
     def connect_gologin_session(self):
         try:
@@ -58,8 +65,8 @@ class GologinHandler:
                 service=service, options=chrome_options)
 
         except Exception as e:
+            traceback.print_exc()
             raise BaseGologinError("Gologin Connection Error", e)
-
 
     def stop_gologin_session(self):
         try:
@@ -67,7 +74,6 @@ class GologinHandler:
             print('✅ GoLogin session stopped successfully')
         except Exception as e:
             raise BaseGologinError("GologinStop Connection Error", e)
-
 
     def create_gologin_profile(self):
         try:
@@ -82,7 +88,7 @@ class GologinHandler:
                 #     "platform": "Linux x86_64"
                 # }
                 "os": "mac",
-                "name": "testing-local2",
+                "name": "testing-docker2",
                 "autoLang": False,
                 "navigator": {
                     "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.7151.56 Safari/537.36",
@@ -103,20 +109,18 @@ class GologinHandler:
                 "timezone": {
                     "enabled": True,
                     "fillBasedOnIp": True,
-                }, 
+                },
                 "geolocation": {
                     "mode": "allow",
                     "enabled": True,
-                    "fillBasedOnIp":True
+                    "fillBasedOnIp": True
                 }
             })
 
-            print('✅ GoLogin profile created successfully')
-
+            print('✅ GoLogin profile created successfully', self.profile_id)
 
         except Exception as e:
             raise BaseGologinError("GologinProfileCreation Error", e)
-        
 
     def change_gologin_proxy(self, proxyConfig):
         try:
@@ -125,7 +129,7 @@ class GologinHandler:
         except Exception as e:
             raise BaseGologinError("GologinProxyAllot Error", e)
 
-
     def download_cookies(self):
         cookies = self.gologin.downloadCookies()
+        self.gologin.writeCookiesFromServer()
         print("cookies", cookies)
