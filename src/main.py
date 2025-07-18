@@ -5,16 +5,13 @@ from scripts.exploreReel import explore_reels_randomly
 from scripts.browseExplore import browse_explore_page
 from scripts.goToMessages import search_and_message_users
 from utils.basicHelpers import get_ip_proxy
-from typing import Optional
 import logging
 from selenium.webdriver.common.by import By
 from gologinHandlers import GologinHandler
 
 class MainExecutor:
-    def __init__(self, proxy_country: str, profile_id: str = None, proxy_ip: Optional[str] = None):
+    def __init__(self, profile_id: str = None):
         self.profile_id = profile_id
-        self.proxy_country = proxy_country
-        self.proxy_ip = proxy_ip
         self.logged_in = False  # Fixed typo: loggined -> logged_in
         self.gologin = None
         self.observer = None
@@ -32,9 +29,7 @@ class MainExecutor:
             
             # Initialize GoLogin handler
             self.gologin = GologinHandler(
-                profile_id=self.profile_id, 
-                proxy_country=self.proxy_country, 
-                proxy_ip=self.proxy_ip
+                profile_id=self.profile_id
             )
 
             self.gologin.connect_gologin_session()
@@ -47,7 +42,7 @@ class MainExecutor:
             
             # Start screen observer
             self.observer = ScreenObserver(self.driver, callback_function=callbackEventHandler)
-            self.observer.start_monitoring()
+            # self.observer.start_monitoring()
             
             self.initialized = True
             self.logger.info("✅ Session initialized successfully")
@@ -156,16 +151,18 @@ class MainExecutor:
     def run_activities(self):
         """Run Instagram activities"""
         try:
-            # if not self.logged_in:
-            #     self.logger.error("Cannot run activities - not logged in")
-            #     return False
+            if not self.logged_in:
+                self.logger.error("Cannot run activities - not logged in")
+                return False
             
             self.logger.info("Starting Instagram activities...")
+
+            # self.driver.get("https://yuvrajsingh.info")
+            # time.sleep(5)
+            # print("✅DOne portfolio")
             
             # Run explore reels
-            self.driver.get("https://www.yuvrajsingh.info")
-            # explore_reels_randomly(self.driver)
-            print("Done with protfolio ✅")
+            explore_reels_randomly(self.driver)
             # browse_explore_page(self.driver)
             # view stories
 
@@ -175,7 +172,7 @@ class MainExecutor:
             # search_and_message_users(
             #     self.driver, 
             #     usernames_list=["ssinghyuvraj02", "jatin_jayant_"],
-            #     message_text="Checkout this https://optivue.in/ jansjdnajs ajsndjna"
+            #     message_text="Hello boys how was optivue"
             # )
 
             time.sleep(5)
@@ -196,8 +193,8 @@ class MainExecutor:
             time.sleep(4)
 
             # Handle login
-            # if not self.perform_login():
-            #     return False
+            if not self.perform_login():
+                return False
             
             time.sleep(5)
             

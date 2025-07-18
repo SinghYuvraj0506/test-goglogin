@@ -1,12 +1,12 @@
+from dotenv import load_dotenv
+load_dotenv()
+
 from config import Config
-print(Config.PROFILE_ID, Config.GL_API_TOKEN)
 import sys
 
 def init():
     from main import MainExecutor
-    executor = MainExecutor(
-        profile_id=Config.PROFILE_ID, proxy_country=Config.PROXY_COUNTRY, proxy_ip=Config.PROXY_IP
-    )
+    executor = MainExecutor(profile_id=Config.PROFILE_ID)
     
     success = executor.execute()
     

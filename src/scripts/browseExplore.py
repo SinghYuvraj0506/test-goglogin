@@ -11,6 +11,8 @@ def browse_explore_page(driver):
     basicUtils = BasicUtils(driver)
     human_mouse = HumanMouseBehavior(driver)
 
+    driver.get_screenshot_as_png()
+
     try:
         print("🧭 Navigating to Instagram Explore Page...")
         basicUtils.click_anchor_by_href("/explore/")
@@ -19,6 +21,8 @@ def browse_explore_page(driver):
         human_mouse.random_mouse_jitter(duration=2)
         human_mouse.natural_scroll(direction="down", amount=random.randint(200, 600))
         human_mouse.random_mouse_jitter(duration=2)
+
+        driver.get_screenshot_as_png()
 
         # Find the main content area
         main_element = WebDriverWait(driver, 10).until(
@@ -34,6 +38,8 @@ def browse_explore_page(driver):
         for i, post in enumerate(to_view):
             try:
                 print(f"\n🔍 Opening post {i+1}/{len(to_view)}")
+
+                driver.get_screenshot_as_png()
 
                 # Scroll the post into view
                 driver.execute_script("arguments[0].scrollIntoView({behavior: 'smooth', block: 'center'});", post)

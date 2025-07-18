@@ -7,6 +7,8 @@ RUN apt-get update && apt-get install -y \
     unzip \
     libfuse2 \
     xvfb \
+    x11vnc \
+    fluxbox \
     libgtk-3-0 \
     libgconf-2-4 \
     libxss1 \
@@ -55,6 +57,9 @@ RUN mkdir -p /root/.gologin/browser && \
 # Set environment variables to match the expected paths
 ENV ORBITA_PATH=/root/.gologin/browser/orbita-browser-137
 ENV DISPLAY=:99
+ENV SCREEN_WIDTH=1920
+ENV SCREEN_HEIGHT=1080
+ENV SCREEN_DEPTH=24
 ENV CHROME_PATH=/root/.gologin/browser/orbita-browser-137/chrome
 
 # Copy requirements first for better Docker layer caching
@@ -68,7 +73,7 @@ COPY src /app/src
 
 # Create a script to start Xvfb and run the application
 RUN echo '#!/bin/bash\n\
-Xvfb :99 -screen 0 1920x1080x24 &\n\
+Xvfb :99 -screen 0 ${SCREEN_WIDTH}x${SCREEN_HEIGHT}x${SCREEN_DEPTH} &\n\
 sleep 2\n\
 python src/index.py' > /app/start.sh && \
 chmod +x /app/start.sh

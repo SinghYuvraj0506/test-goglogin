@@ -6,6 +6,8 @@ from webdriver_manager.chrome import ChromeDriverManager
 from config import Config
 from utils.basicHelpers import build_brightdata_proxy
 import traceback
+import time
+
 
 class BaseGologinError(Exception):
     """Base exception for gologin related error"""
@@ -17,42 +19,51 @@ class BaseGologinError(Exception):
 
 
 class GologinHandler:
-    def __init__(self, proxy_country: str, profile_id: str = None, proxy_ip: str = None):
+    def __init__(self, profile_id: str = None):
         token = Config.GL_API_TOKEN
         if not token:
             raise BaseGologinError("Gologin Token not found")
-        
+
         params = {
             'token': token,
             'extra_params': [
-                '--no-sandbox',
-                '--headless',
-                # '--disable-dev-shm-usage',
+                # '--headless=chrome',
                 # '--disable-gpu',
-                # '--disable-web-security',
-                # '--disable-features=VizDisplayCompositor',
-                # '--remote-debugging-port=9222'
+                # '--disable-dev-shm-usage',
+                # '--no-sandbox',
+                # '--disable-software-rasterizer',
+                # '--use-gl=swiftshader',
+                # '--window-size=1920,1080'
+                # '--disable-dev-shm-usage',
+                '--no-sandbox',
+                '--window-size=1920,1080',
+                '--start-maximized',
+                '--disable-background-timer-throttling',
+                '--disable-backgrounding-occluded-windows',
+                '--disable-renderer-backgrounding',
+                '--disable-blink-features=AutomationControlled',
+                '--disable-automation',
+                '--memory-pressure-off',
+                '--disable-web-security',
+                '--disable-features=VizDisplayCompositor'
             ]
         }
 
         self.gologin = GoLogin(params)
         self.profile_id = profile_id
-        self.proxy_country = proxy_country
-        self.proxy_ip = proxy_ip
         self.driver = None
 
         if profile_id is None:
             self.create_gologin_profile()
 
         self.gologin.setProfileId(self.profile_id)
-        proxyConfig = build_brightdata_proxy(self.proxy_country, self.proxy_ip)
+        proxyConfig = build_brightdata_proxy()
         self.change_gologin_proxy(proxyConfig)
 
     def connect_gologin_session(self):
         try:
             print('📡 Starting GoLogin session...')
             debugger_address = self.gologin.start()
-            # Setup Chrome driver
             service = Service(ChromeDriverManager(
                 driver_version=self.gologin.get_chromium_version()).install())
 
@@ -87,14 +98,14 @@ class GologinHandler:
                 #     "language": "en-US",
                 #     "platform": "Linux x86_64"
                 # }
-                "os": "mac",
-                "name": "testing-docker2",
+                "os": "lin",
+                "name": f"instagram-bot-{int(time.time())}",
                 "autoLang": False,
                 "navigator": {
-                    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.7151.56 Safari/537.36",
-                    "resolution": "1440x900",
+                    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.7151.56 Safari/537.36",
+                    "resolution": "1920x1080",
                     "language": "en-US",
-                    "platform": "MacIntel"
+                    "platform": "Linux x86_64"
                 },
                 "webRTC": {
                     "enable": True,
@@ -115,11 +126,40 @@ class GologinHandler:
                     "enabled": True,
                     "fillBasedOnIp": True
                 }
+                # "os": "mac",
+                # "name": "testing-docker2",
+                # "autoLang": False,
+                # "navigator": {
+                #     "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.7151.56 Safari/537.36",
+                #     "resolution": "1440x900",
+                #     "language": "en-US",
+                #     "platform": "MacIntel"
+                # },
+                # "webRTC": {
+                #     "enable": True,
+                #     "isEmptyIceList": False,
+                #     "mode": "alerted"
+                # },
+                # "webGL": {
+                #     "mode": "noise",
+                #     "getClientRectsNoise": 1,
+                #     "noise": 1
+                # },
+                # "timezone": {
+                #     "enabled": True,
+                #     "fillBasedOnIp": True,
+                # },
+                # "geolocation": {
+                #     "mode": "allow",
+                #     "enabled": True,
+                #     "fillBasedOnIp": True
+                # }
             })
 
             print('✅ GoLogin profile created successfully', self.profile_id)
 
         except Exception as e:
+            print(e)
             raise BaseGologinError("GologinProfileCreation Error", e)
 
     def change_gologin_proxy(self, proxyConfig):

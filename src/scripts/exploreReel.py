@@ -28,6 +28,7 @@ def explore_reels_randomly(driver, count=5, min_watch=4, max_watch=12):
         return
 
     time.sleep(3)
+    driver.get_screenshot_as_png()
     human_mouse.random_mouse_jitter(duration=5)
     time.sleep(2)
 

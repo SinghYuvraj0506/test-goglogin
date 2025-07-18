@@ -135,7 +135,7 @@ class ScreenObserver:
             
             if new_url != self.current_url:
                 self.logger.info(f"URL changed: {self.current_url} -> {new_url}")
-                
+
                 # Handle specific URL patterns
                 self._handle_url_change(self.current_url, new_url)
                 
@@ -149,10 +149,46 @@ class ScreenObserver:
                         'new_url': new_url,
                         'timestamp': datetime.now().isoformat()
                     })
+
+                self.driver.get_screenshot_as_png()
                     
         except Exception as e:
             self.logger.error(f"Error checking URL changes: {e}")
     
+    def _trigger_instagram_lazy_loading(self):
+        """Scroll and trigger lazy loading for Instagram post content"""
+        try:
+            self.logger.info("Triggering Instagram lazy loading...")
+
+            # Step 1: Scroll the page to trigger content loading
+            for _ in range(5):
+                self.driver.execute_script("window.scrollBy(0, 400);")
+                time.sleep(0.5)
+
+            # Step 2: Force load images and videos
+            self.driver.execute_script("""
+                const elements = document.querySelectorAll('img, video');
+                elements.forEach(el => {
+                    try {
+                        el.scrollIntoView({ behavior: 'instant', block: 'center' });
+                    } catch (e) {}
+                });
+            """)
+
+            # Step 3: Auto-play videos (if needed)
+            self.driver.execute_script("""
+                document.querySelectorAll('video').forEach(video => {
+                    video.muted = true;
+                    video.play().catch(() => {});
+                });
+            """)
+
+            # Optional: Wait for network activity to settle
+            time.sleep(1.5)
+
+        except Exception as e:
+            self.logger.error(f"Error triggering lazy loading: {e}")
+
     def _check_dialogs(self):
         """Check for dialogs and handle them"""
         try:

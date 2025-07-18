@@ -4,22 +4,17 @@ from config import Config
 import json
 from selenium.webdriver.common.by import By
 
-
-def build_brightdata_proxy(country: str, ip: str = None) -> dict:
-    user = f"{Config.BRIGHTDATA_USER_NAME}-zone-{Config.BRIGHTDATA_ZONE}-country-{country}"
-    if ip:
-        user += f"-ip-{ip}"
-    
-    # print("proxy user is", user)
-    user= "brd-customer-hl_a70b254f-zone-residential_proxy1-country-in-city-delhi-session-mycheck2134"
+def build_brightdata_proxy() -> dict:
+    user = f"{Config.BRIGHTDATA_USER_NAME}-zone-{Config.BRIGHTDATA_ZONE}-country-{Config.PROXY_COUNTRY}-city-{Config.PROXY_CITY}"
+    if Config.PROXY_SESSION:
+        user += f"-session-{Config.PROXY_SESSION}"
     
     return {
         "mode": "https",
         "host": "brd.superproxy.io",
         "port": 33335,
         "username": user,
-        # "password": Config.BRIGHTDATA_PASSWORD
-        "password": "1slwg7840okd"
+        "password": Config.BRIGHTDATA_PASSWORD
     }
 
 
