@@ -103,6 +103,8 @@ class HumanMouseBehavior:
                     
                     offset_x_calc = x - element_center_x
                     offset_y_calc = y - element_center_y
+
+                    print(offset_x_calc, offset_y_calc)
                     
                     # Move to point
                     self.action_chains.move_to_element_with_offset(element, offset_x_calc, offset_y_calc)

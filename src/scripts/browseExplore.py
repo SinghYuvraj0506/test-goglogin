@@ -11,10 +11,12 @@ def browse_explore_page(driver):
     basicUtils = BasicUtils(driver)
     human_mouse = HumanMouseBehavior(driver)
 
-    driver.get_screenshot_as_png()
+    driver.save_screenshot("/app/instagram_0.png")
+    human_mouse.random_mouse_jitter(duration=5)
 
     try:
         print("🧭 Navigating to Instagram Explore Page...")
+        driver.execute_script("window.scrollTo(0, 100);")
         basicUtils.click_anchor_by_href("/explore/")
         
         time.sleep(5)
@@ -22,7 +24,7 @@ def browse_explore_page(driver):
         human_mouse.natural_scroll(direction="down", amount=random.randint(200, 600))
         human_mouse.random_mouse_jitter(duration=2)
 
-        driver.get_screenshot_as_png()
+        driver.execute_script("window.scrollTo(0, 100);")
 
         # Find the main content area
         main_element = WebDriverWait(driver, 10).until(

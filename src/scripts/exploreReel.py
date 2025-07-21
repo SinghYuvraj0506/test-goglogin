@@ -12,9 +12,16 @@ def explore_reels_randomly(driver, count=5, min_watch=4, max_watch=12):
     basicUtils = BasicUtils(driver)
     human_mouse = HumanMouseBehavior(driver)
 
+    driver.save_screenshot("/app/instagram_0.png")
+    human_mouse.random_mouse_jitter(duration=5)
+
     try:
         print("🎬 Navigating to Instagram Reels...")
+        driver.execute_script("window.scrollTo(0, 100);")
         basicUtils.click_anchor_by_href("/reels/")
+
+        driver.save_screenshot("/app/instagram_1.png")
+
 
         # Wait for Reels feed to load
         WebDriverWait(driver, 10).until(
@@ -28,7 +35,8 @@ def explore_reels_randomly(driver, count=5, min_watch=4, max_watch=12):
         return
 
     time.sleep(3)
-    driver.get_screenshot_as_png()
+    driver.execute_script("window.scrollTo(0, 100);")
+    driver.save_screenshot("/app/instagram_2.png")
     human_mouse.random_mouse_jitter(duration=5)
     time.sleep(2)
 
@@ -47,6 +55,8 @@ def explore_reels_randomly(driver, count=5, min_watch=4, max_watch=12):
         except NoSuchElementException:
             creator_name = "Unknown Creator"
 
+        
+        driver.save_screenshot(f"/app/instagram_reel{i}.png")
 
         print(f"📸 Creator: {creator_name}")
         print(f"⏱️ Watching for {watch_time} seconds...")

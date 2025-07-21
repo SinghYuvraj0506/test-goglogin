@@ -1,44 +1,32 @@
 FROM python:3.11-slim
 
-# Install system dependencies needed for GoLogin and AppImage
-RUN apt-get update && apt-get install -y \
-    curl \
-    wget \
-    unzip \
-    libfuse2 \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     xvfb \
-    x11vnc \
-    fluxbox \
-    libgtk-3-0 \
-    libgconf-2-4 \
+    curl \
+    unzip \
+    libnss3 \
     libxss1 \
-    libappindicator3-1 \
     libasound2 \
-    libxtst6 \
-    libatspi2.0-0 \
-    libdrm2 \
+    libatk1.0-0 \
+    libatk-bridge2.0-0 \
+    libx11-xcb1 \
     libxcomposite1 \
+    libxcursor1 \
     libxdamage1 \
+    libxi6 \
+    libxtst6 \
+    libglib2.0-0 \
+    libdbus-1-3 \
+    libdrm2 \
     libxrandr2 \
     libgbm1 \
-    libxkbcommon0 \
     libpango-1.0-0 \
-    libcairo-gobject2 \
-    fonts-liberation \
-    libnss3 \
-    libgdk-pixbuf2.0-0 \
+    libgtk-3-0 \
     libcurl3-gnutls \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Set working directory
 WORKDIR /app
-
-# Download and extract GoLogin
-# RUN curl -L -o gologin.tar https://dld.gologin.com/gologin.tar && \
-#     mkdir -p /opt/gologin && \
-#     tar -xf gologin.tar -C /opt/gologin && \
-#     find /opt/gologin -type f -executable -exec chmod +x {} \; && \
-#     rm gologin.tar
 
 # Download and extract Orbita browser (matching GoLogin's BrowserManager method)
 RUN mkdir -p /root/.gologin/browser && \
@@ -56,11 +44,11 @@ RUN mkdir -p /root/.gologin/browser && \
 
 # Set environment variables to match the expected paths
 ENV ORBITA_PATH=/root/.gologin/browser/orbita-browser-137
+ENV CHROME_PATH=/root/.gologin/browser/orbita-browser-137/chrome
 ENV DISPLAY=:99
 ENV SCREEN_WIDTH=1920
 ENV SCREEN_HEIGHT=1080
 ENV SCREEN_DEPTH=24
-ENV CHROME_PATH=/root/.gologin/browser/orbita-browser-137/chrome
 
 # Copy requirements first for better Docker layer caching
 COPY requirements.txt .
@@ -75,8 +63,12 @@ COPY src /app/src
 RUN echo '#!/bin/bash\n\
 Xvfb :99 -screen 0 ${SCREEN_WIDTH}x${SCREEN_HEIGHT}x${SCREEN_DEPTH} &\n\
 sleep 2\n\
-python src/index.py' > /app/start.sh && \
+python src/test.py' > /app/start.sh && \
 chmod +x /app/start.sh
+
+# RUN echo '#!/bin/bash\n\
+# python src/test.py' > /app/start.sh && \
+# chmod +x /app/start.sh
 
 # Run the script
 CMD ["/app/start.sh"]
