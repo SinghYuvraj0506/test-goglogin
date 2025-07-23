@@ -200,29 +200,29 @@ class HumanTypingBehavior:
                     previous_char = typed_text[-1] if typed_text else None
                     
                     # Determine if we should make a typo
-                    if self.should_make_typo(char, i, len(text)):
-                        # Make a typo
-                        typo_char = self.get_typo_char(char)
+                    # if self.should_make_typo(char, i, len(text)):
+                    #     # Make a typo
+                    #     typo_char = self.get_typo_char(char)
                         
-                        if typo_char and typo_char.strip(): 
-                            # Type the typo
-                            target.send_keys(typo_char)
-                            typed_text += typo_char
+                    #     if typo_char and typo_char.strip(): 
+                    #         # Type the typo
+                    #         target.send_keys(typo_char)
+                    #         typed_text += typo_char
                             
-                            # Pause before realizing mistake
-                            correction_delay = random.uniform(0.3, 1.2)
-                            time.sleep(correction_delay)
+                    #         # Pause before realizing mistake
+                    #         correction_delay = random.uniform(0.3, 1.2)
+                    #         time.sleep(correction_delay)
                             
-                            # Correct the typo
-                            backspace_count = len(typo_char)
-                            for _ in range(backspace_count):
-                                target.send_keys(Keys.BACKSPACE)
+                    #         # Correct the typo
+                    #         backspace_count = len(typo_char)
+                    #         for _ in range(backspace_count):
+                    #             target.send_keys(Keys.BACKSPACE)
                             
-                            # Update typed_text
-                            typed_text = typed_text[:-backspace_count]
+                    #         # Update typed_text
+                    #         typed_text = typed_text[:-backspace_count]
                             
-                            # Small pause after correction
-                            time.sleep(random.uniform(0.1, 0.3))
+                    #         # Small pause after correction
+                    #         time.sleep(random.uniform(0.1, 0.3))
                     
 
                     # Type the correct character
@@ -253,6 +253,7 @@ class HumanTypingBehavior:
             
             # Final pause after typing
             time.sleep(random.uniform(0.2, 0.8))
+            print("Typed text is", typed_text)
             return True
             
         except (TimeoutException, ElementNotInteractableException) as e:

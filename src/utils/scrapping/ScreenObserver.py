@@ -1,14 +1,12 @@
 import time
 import threading
 import logging
-from selenium import webdriver
 from selenium.webdriver.common.by import By
-from selenium.common.exceptions import TimeoutException, NoSuchElementException, ElementNotInteractableException
-from selenium.webdriver.common.keys import Keys
-from selenium.webdriver.common.action_chains import ActionChains
+from selenium.common.exceptions import TimeoutException, NoSuchElementException
 import json
 from datetime import datetime
 from utils.scrapping.HumanMouseBehavior import HumanMouseBehavior
+from utils.scrapping.DriverHealthMonitor import DriverHealthMonitor
 
 
 class ScreenObserver:
@@ -25,6 +23,7 @@ class ScreenObserver:
         self.monitor_thread = None
         self.check_interval = 0.5
         self.human_mouse = HumanMouseBehavior(driver)
+        self.health_monitor = DriverHealthMonitor(driver)
         
         # Setup logging
         logging.basicConfig(level=log_level, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -115,6 +114,9 @@ class ScreenObserver:
         """Main monitoring loop"""
         while self.is_monitoring:
             try:
+                # Auto-revive check
+                self.health_monitor.auto_revive_if_needed()
+
                 # Check for URL changes
                 self._check_url_changes()
                 
@@ -126,7 +128,9 @@ class ScreenObserver:
                 
             except Exception as e:
                 self.logger.error(f"Error in monitoring loop: {e}")
+                self.health_monitor.revive_driver("scroll")
                 time.sleep(1)  # Wait longer on error
+
     
     def _check_url_changes(self):
         """Check for URL changes and handle them"""
@@ -155,40 +159,6 @@ class ScreenObserver:
         except Exception as e:
             self.logger.error(f"Error checking URL changes: {e}")
     
-    def _trigger_instagram_lazy_loading(self):
-        """Scroll and trigger lazy loading for Instagram post content"""
-        try:
-            self.logger.info("Triggering Instagram lazy loading...")
-
-            # Step 1: Scroll the page to trigger content loading
-            for _ in range(5):
-                self.driver.execute_script("window.scrollBy(0, 400);")
-                time.sleep(0.5)
-
-            # Step 2: Force load images and videos
-            self.driver.execute_script("""
-                const elements = document.querySelectorAll('img, video');
-                elements.forEach(el => {
-                    try {
-                        el.scrollIntoView({ behavior: 'instant', block: 'center' });
-                    } catch (e) {}
-                });
-            """)
-
-            # Step 3: Auto-play videos (if needed)
-            self.driver.execute_script("""
-                document.querySelectorAll('video').forEach(video => {
-                    video.muted = true;
-                    video.play().catch(() => {});
-                });
-            """)
-
-            # Optional: Wait for network activity to settle
-            time.sleep(1.5)
-
-        except Exception as e:
-            self.logger.error(f"Error triggering lazy loading: {e}")
-
     def _check_dialogs(self):
         """Check for dialogs and handle them"""
         try:
@@ -222,6 +192,8 @@ class ScreenObserver:
         """Handle detected dialog using appropriate handler"""
         if dialog_type in self.action_handlers:
             try:
+                # Revive after dialog interaction
+                self.health_monitor.revive_driver("click_body")
                 return self.action_handlers[dialog_type]()
             except Exception as e:
                 self.logger.error(f"Error handling dialog {dialog_type}: {e}")
@@ -231,6 +203,8 @@ class ScreenObserver:
     def _handle_url_change(self, old_url, new_url):
         """Handle URL changes with specific patterns"""
         # Check for onetap save info page
+        self.health_monitor.revive_driver("scroll")
+
         if 'accounts/onetap' in new_url:
             self.url_change_handlers['onetap_save_info'](old_url, new_url)
         

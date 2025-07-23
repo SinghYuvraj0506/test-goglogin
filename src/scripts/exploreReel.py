@@ -7,21 +7,19 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from utils.scrapping.BasicUtils import BasicUtils
 from utils.scrapping.HumanMouseBehavior import HumanMouseBehavior
+from utils.scrapping.ScreenObserver import ScreenObserver
 
-def explore_reels_randomly(driver, count=5, min_watch=4, max_watch=12):
+def explore_reels_randomly(driver, observer: ScreenObserver,count=5, min_watch=4, max_watch=12):
     basicUtils = BasicUtils(driver)
     human_mouse = HumanMouseBehavior(driver)
-
-    driver.save_screenshot("/app/instagram_0.png")
+    observer.health_monitor.revive_driver("click_body")
     human_mouse.random_mouse_jitter(duration=5)
-
+    
     try:
         print("🎬 Navigating to Instagram Reels...")
-        driver.execute_script("window.scrollTo(0, 100);")
         basicUtils.click_anchor_by_href("/reels/")
 
-        driver.save_screenshot("/app/instagram_1.png")
-
+        observer.health_monitor.revive_driver("screenshot")
 
         # Wait for Reels feed to load
         WebDriverWait(driver, 10).until(
@@ -35,8 +33,7 @@ def explore_reels_randomly(driver, count=5, min_watch=4, max_watch=12):
         return
 
     time.sleep(3)
-    driver.execute_script("window.scrollTo(0, 100);")
-    driver.save_screenshot("/app/instagram_2.png")
+    observer.health_monitor.revive_driver("scroll")
     human_mouse.random_mouse_jitter(duration=5)
     time.sleep(2)
 
@@ -55,8 +52,9 @@ def explore_reels_randomly(driver, count=5, min_watch=4, max_watch=12):
         except NoSuchElementException:
             creator_name = "Unknown Creator"
 
-        
-        driver.save_screenshot(f"/app/instagram_reel{i}.png")
+
+        if i % 2 == 0: 
+                observer.health_monitor.revive_driver("scroll")
 
         print(f"📸 Creator: {creator_name}")
         print(f"⏱️ Watching for {watch_time} seconds...")
@@ -77,6 +75,7 @@ def explore_reels_randomly(driver, count=5, min_watch=4, max_watch=12):
 
         # Optional check if new reel is loaded or stuck
         try:
+            observer.health_monitor.revive_driver("screenshot")
             WebDriverWait(driver, 5).until(
                 EC.presence_of_element_located((By.CSS_SELECTOR, "video"))
             )

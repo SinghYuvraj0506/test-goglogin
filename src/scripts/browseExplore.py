@@ -6,25 +6,26 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from utils.scrapping.HumanMouseBehavior import HumanMouseBehavior
 from utils.scrapping.BasicUtils import BasicUtils
+from utils.scrapping.ScreenObserver import ScreenObserver
 
-def browse_explore_page(driver):
+def browse_explore_page(driver,observer: ScreenObserver):
     basicUtils = BasicUtils(driver)
     human_mouse = HumanMouseBehavior(driver)
-
-    driver.save_screenshot("/app/instagram_0.png")
+    observer.health_monitor.revive_driver("click_body")
     human_mouse.random_mouse_jitter(duration=5)
 
     try:
         print("🧭 Navigating to Instagram Explore Page...")
-        driver.execute_script("window.scrollTo(0, 100);")
         basicUtils.click_anchor_by_href("/explore/")
+
+        observer.health_monitor.revive_driver("screenshot")
         
         time.sleep(5)
         human_mouse.random_mouse_jitter(duration=2)
         human_mouse.natural_scroll(direction="down", amount=random.randint(200, 600))
         human_mouse.random_mouse_jitter(duration=2)
 
-        driver.execute_script("window.scrollTo(0, 100);")
+        observer.health_monitor.revive_driver("scroll")
 
         # Find the main content area
         main_element = WebDriverWait(driver, 10).until(
@@ -41,8 +42,6 @@ def browse_explore_page(driver):
             try:
                 print(f"\n🔍 Opening post {i+1}/{len(to_view)}")
 
-                driver.get_screenshot_as_png()
-
                 # Scroll the post into view
                 driver.execute_script("arguments[0].scrollIntoView({behavior: 'smooth', block: 'center'});", post)
                 time.sleep(random.uniform(0.5, 1.5))
@@ -52,11 +51,15 @@ def browse_explore_page(driver):
                 time.sleep(random.uniform(2.5, 4.5))  # Simulate reading/viewing
                 human_mouse.random_mouse_jitter(duration=2)
 
+                if i % 2 == 0: 
+                    observer.health_monitor.revive_driver("screenshot")
+
                 print("🔙 Going back to explore")
                 driver.back()
                 time.sleep(random.uniform(2.5, 4))
 
                 # Scroll again after viewing a post
+                observer.health_monitor.revive_driver("scroll")
                 human_mouse.random_mouse_jitter(duration=2)
                 human_mouse.natural_scroll(direction="down", amount=random.randint(200, 600))
 
@@ -64,6 +67,8 @@ def browse_explore_page(driver):
                 print(f"⚠️ Failed to open/view post: {e}")
                 driver.back()
                 time.sleep(2)
+
+        observer.health_monitor.revive_driver("screenshot")
 
     except NoSuchElementException or TimeoutException:
         print("❌ No posts found on explore page.")

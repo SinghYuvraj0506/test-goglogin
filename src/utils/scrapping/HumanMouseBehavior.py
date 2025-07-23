@@ -135,6 +135,8 @@ class HumanMouseBehavior:
                 self.action_chains.move_to_element_with_offset(element, micro_x, micro_y)
                 self.action_chains.click()
                 self.action_chains.perform()
+
+                print("🐁 clicked via mouse")
                 
                 # Very brief pause after click
                 time.sleep(random.uniform(0.01, 0.05))

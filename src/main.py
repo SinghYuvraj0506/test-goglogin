@@ -42,7 +42,10 @@ class MainExecutor:
             
             # Start screen observer
             self.observer = ScreenObserver(self.driver, callback_function=callbackEventHandler)
-            # self.observer.start_monitoring()
+            self.observer.start_monitoring()
+
+            # Force initial revival
+            self.observer.health_monitor.revive_driver("scroll")
             
             self.initialized = True
             self.logger.info("✅ Session initialized successfully")
@@ -162,18 +165,19 @@ class MainExecutor:
             # print("✅DOne portfolio")
             
             # Run explore reels
-            explore_reels_randomly(self.driver)
-            # browse_explore_page(self.driver)
+            # explore_reels_randomly(self.driver, self.observer)
+            # browse_explore_page(self.driver, self.observer)
             # view stories
 
             # account warmup
             
             # Uncomment for messaging
-            # search_and_message_users(
-            #     self.driver, 
-            #     usernames_list=["ssinghyuvraj02", "jatin_jayant_"],
-            #     message_text="Hello boys how was optivue"
-            # )
+            search_and_message_users(
+                self.driver, 
+                usernames_list=["ssinghyuvraj02", "jatin_jayant_"],
+                message_text="Hey bro whatsup",
+                observer=self.observer
+            )
 
             time.sleep(5)
             

@@ -27,25 +27,41 @@ class GologinHandler:
         params = {
             'token': token,
             'extra_params': [
-                # '--headless=chrome',
-                # '--disable-gpu',
-                # '--disable-dev-shm-usage',
-                # '--no-sandbox',
-                # '--disable-software-rasterizer',
-                # '--use-gl=swiftshader',
-                # '--window-size=1920,1080'
-                # '--disable-dev-shm-usage',
+                '--headless=new',
                 '--no-sandbox',
-                '--window-size=1920,1080',
-                '--start-maximized',
+                '--disable-dev-shm-usage',
+                '--disable-gpu',
+                '--disable-gpu-sandbox',
+
+                # VULKAN-SPECIFIC FIXES
+                '--disable-vulkan',
+                '--disable-vulkan-surface',
+                '--disable-vulkan-fallback-to-gl-for-testing',
+                '--use-vulkan=disabled',
+
+                # FORCE SOFTWARE RENDERING
+                '--use-gl=disabled',
+                '--disable-accelerated-2d-canvas',
+                '--disable-accelerated-video-decode',
+                '--disable-gpu-rasterization',
+                '--disable-gpu-memory-buffer-video-frames',
+
+                # DISABLE PROBLEMATIC FEATURES
+                '--disable-features=VizDisplayCompositor,Vulkan,UseSkiaRenderer,WebGL,WebGL2',
+                '--disable-3d-apis',
+                '--disable-webgl',
+                '--disable-webgl2',
+
+                # YOUR EXISTING FLAGS
                 '--disable-background-timer-throttling',
                 '--disable-backgrounding-occluded-windows',
                 '--disable-renderer-backgrounding',
                 '--disable-blink-features=AutomationControlled',
-                '--disable-automation',
-                '--memory-pressure-off',
-                '--disable-web-security',
-                '--disable-features=VizDisplayCompositor'
+                '--window-size=1920,1080'
+
+                # CONNECTION STABILITY
+                '--max_old_space_size=2048',
+                '--disable-extensions-http-throttling'
             ]
         }
 
@@ -66,6 +82,7 @@ class GologinHandler:
             debugger_address = self.gologin.start()
             service = Service(ChromeDriverManager(
                 driver_version=self.gologin.get_chromium_version()).install())
+            # service = Service("/usr/local/bin/chromedriver-137")
 
             chrome_options = webdriver.ChromeOptions()
             chrome_options.add_experimental_option(
