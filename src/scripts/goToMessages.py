@@ -9,6 +9,7 @@ from utils.scrapping.HumanTypingBehavior import HumanTypingBehavior
 from utils.scrapping.BasicUtils import BasicUtils
 from selenium.webdriver.common.keys import Keys
 from utils.scrapping.ScreenObserver import ScreenObserver
+from selenium.webdriver.common.action_chains import ActionChains
 
 
 def search_and_message_users(driver, usernames_list, message_text, observer: ScreenObserver, delay_between_messages=(30, 50)):
@@ -32,6 +33,8 @@ def search_and_message_users(driver, usernames_list, message_text, observer: Scr
     time.sleep(2)
 
     basicUtils.click_anchor_by_href("/direct/inbox/")
+
+    observer.health_monitor.revive_driver("refresh")
 
     # Check if we're on a valid user profile
     try:
@@ -121,9 +124,17 @@ def search_user(driver, username: str, human_mouse: HumanMouseBehavior, human_ty
 
         search_input = (By.CSS_SELECTOR, "input[placeholder*='Search']")
         human_mouse.human_like_move_to_element(search_input, click=True)
-        human_typing.human_like_type(
-            search_input, text=username, clear_field=True)
-        time.sleep(2.5)
+        time.sleep(2)
+
+        elem=WebDriverWait(driver, 5).until(
+                    EC.element_to_be_clickable(search_input))
+        # human_typing.human_like_type(
+        #     search_input, text=username, clear_field=True)
+        elem.clear()
+        human_typing.paste_text(elem, username)
+        elem.send_keys(Keys.RETURN)
+        
+        time.sleep(4)
         driver.save_screenshot("/app/instagram_0.png")
 
         try:
@@ -184,7 +195,10 @@ def send_message_to_user(driver, username, message_text, human_mouse: HumanMouse
                 (By.CSS_SELECTOR, "div[role='textbox']"))
         )
         human_mouse.human_like_move_to_element(message_input, click=True)
-        human_typing.human_like_type(message_input, message_text)
+
+        # human_typing.human_like_type(message_input, message_text)
+        message_input.clear()
+        human_typing.paste_text(message_input, message_text)
         time.sleep(3)
 
         driver.save_screenshot("/app/instagram_1.png")

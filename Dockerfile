@@ -1,54 +1,44 @@
-FROM python:3.11-slim
+# syntax=docker/dockerfile:1.4
+FROM --platform=linux/amd64 python:3.11-slim as base
 
+ENV DEBIAN_FRONTEND=noninteractive
+ARG MAJOR_VERSION=135
+ARG CHROMEDRIVER_VERSION=135.0.7049.41
+
+# Update and install system dependencies for Chromium
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl wget gnupg unzip xvfb libnss3 libatk-bridge2.0-0 libdrm2 libxkbcommon0 libgbm1 libxss1 libasound2 fonts-liberation libcups2 libxcomposite1 libxdamage1 libxrandr2 libxfixes3 libxtst6 libxi6 libx11-xcb1 libx11-6 libxcb1 libxext6 libxrender1 libcairo2 libglib2.0-0 libgtk-3-0 libgdk-pixbuf2.0-0 libpango-1.0-0 libpangocairo-1.0-0 libatk1.0-0 libcairo-gobject2 libxshmfence1 libgl1-mesa-glx libgl1-mesa-dri libegl1-mesa libxau6 libxdmcp6 libappindicator3-1 xdg-utils ca-certificates libcurl3-gnutls \
-    && apt-get clean && rm -rf /var/lib/apt/lists/*
+    wget curl unzip gnupg ca-certificates fonts-liberation \
+    libnss3 libxss1 libappindicator3-1 libasound2 libatk-bridge2.0-0 \
+    libgtk-3-0 libdrm2 libgbm1 libxcomposite1 libxdamage1 libxrandr2 libu2f-udev \
+    libgl1 libx11-xcb1 libxshmfence1 libxext6 libxfixes3 libcurl3-gnutls libvulkan1 mesa-utils libgl1-mesa-dri fonts-liberation \
+    xvfb xserver-xephyr tigervnc-standalone-server x11-utils gnumeric \
+    && rm -rf /var/lib/apt/lists/*
 
 # Set working directory
 WORKDIR /app
 
-# Download and extract Orbita browser (matching GoLogin's BrowserManager method)
-RUN mkdir -p /root/.gologin/browser && \
-    MAJOR_VERSION=135 && \
-    curl -L -o /root/.gologin/browser/orbita-browser-temp.tar.gz https://orbita-browser-linux.gologin.com/orbita-browser-latest-${MAJOR_VERSION}.tar.gz && \
-    mkdir -p /root/.gologin/browser/temp-extract-${MAJOR_VERSION} && \
-    tar -xzf /root/.gologin/browser/orbita-browser-temp.tar.gz -C /root/.gologin/browser/temp-extract-${MAJOR_VERSION} && \
-    mkdir -p /root/.gologin/browser/orbita-browser-${MAJOR_VERSION} && \
-    SUBFOLDER=$(ls /root/.gologin/browser/temp-extract-${MAJOR_VERSION} | head -1) && \
-    mv /root/.gologin/browser/temp-extract-${MAJOR_VERSION}/${SUBFOLDER}/* /root/.gologin/browser/orbita-browser-${MAJOR_VERSION}/ && \
-    rm -rf /root/.gologin/browser/temp-extract-${MAJOR_VERSION} && \
-    rm /root/.gologin/browser/orbita-browser-temp.tar.gz && \
-    find /root/.gologin/browser/orbita-browser-${MAJOR_VERSION} -name "chrome" -type f -exec chmod +x {} \; && \
-    find /root/.gologin/browser/orbita-browser-${MAJOR_VERSION} -name "orbita" -type f -exec chmod +x {} \;
+# Download and extract Orbita browser
+RUN mkdir -p /root/.gologin/browser/orbita-browser-${MAJOR_VERSION} && \
+    curl -sL https://orbita-browser-linux.gologin.com/orbita-browser-latest-${MAJOR_VERSION}.tar.gz | \
+    tar -xz --strip-components=1 -C /root/.gologin/browser/orbita-browser-${MAJOR_VERSION}
 
+# Add Orbita to PATH
+ENV ORBITA_PATH=/root/.gologin/browser/orbita-browser-${MAJOR_VERSION}
+ENV PATH="${ORBITA_PATH}:${PATH}"
 
-# Set environment variables to match the expected paths
-ENV ORBITA_PATH=/root/.gologin/browser/orbita-browser-137
-ENV CHROME_PATH=/root/.gologin/browser/orbita-browser-137/chrome
-ENV DISPLAY=:99
-ENV SCREEN_WIDTH=1920
-ENV SCREEN_HEIGHT=1080
-ENV SCREEN_DEPTH=24
-ENV LIBGL_ALWAYS_SOFTWARE=1
-ENV MESA_GL_VERSION_OVERRIDE=3.3
-ENV GALLIUM_DRIVER=llvmpipe
+# Install ChromeDriver matching Orbita version
+RUN curl -sL "https://storage.googleapis.com/chrome-for-testing-public/${CHROMEDRIVER_VERSION}/linux64/chromedriver-linux64.zip" -o chromedriver.zip \
+    && unzip chromedriver.zip \
+    && mv chromedriver-linux64/chromedriver /usr/local/bin/chromedriver \
+    && chmod +x /usr/local/bin/chromedriver \
+    && rm -rf chromedriver.zip chromedriver-linux64
 
-# Copy requirements first for better Docker layer caching
+# Copy Python source code
 COPY requirements.txt .
-
-# Install Python dependencies
+# Install Python requirements
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy application files
-COPY src /app/src
+COPY src /src
 
-# Create a script to start Xvfb and run the application
-# RUN echo '#!/bin/bash\n\
-# Xvfb :99 -screen 0 ${SCREEN_WIDTH}x${SCREEN_HEIGHT}x${SCREEN_DEPTH} &\n\
-# sleep 2\n\
-# python src/index.py' > /app/start.sh && \
-# chmod +x /app/start.sh
-
-# Run the script
-# CMD ["/app/start.sh"]
-CMD ["python" ,"/app/src/index.py"]
+# Entrypoint
+CMD ["python", "/src/index.py"]

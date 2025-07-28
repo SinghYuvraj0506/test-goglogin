@@ -27,7 +27,7 @@ class GologinHandler:
         params = {
             'token': token,
             'extra_params': [
-                '--headless=new',
+                # '--headless=new',
                 '--no-sandbox',
                 '--disable-dev-shm-usage',
                 '--disable-gpu',
@@ -38,11 +38,13 @@ class GologinHandler:
                 '--disable-vulkan-surface',
                 '--disable-vulkan-fallback-to-gl-for-testing',
                 '--use-vulkan=disabled',
+                '--disable-features=Vulkan'
 
                 # FORCE SOFTWARE RENDERING
                 '--use-gl=disabled',
                 '--disable-accelerated-2d-canvas',
                 '--disable-accelerated-video-decode',
+                '--disable-software-rasterizer',
                 '--disable-gpu-rasterization',
                 '--disable-gpu-memory-buffer-video-frames',
 
@@ -82,11 +84,17 @@ class GologinHandler:
             debugger_address = self.gologin.start()
             service = Service(ChromeDriverManager(
                 driver_version=self.gologin.get_chromium_version()).install())
-            # service = Service("/usr/local/bin/chromedriver-137")
+            # service = Service("/usr/local/bin/chromedriver")
 
             chrome_options = webdriver.ChromeOptions()
             chrome_options.add_experimental_option(
                 "debuggerAddress", debugger_address)
+
+            chrome_options.add_argument("--disable-gpu")
+            chrome_options.add_argument("--disable-software-rasterizer")
+            chrome_options.add_argument("--disable-3d-apis")
+            chrome_options.add_argument("--use-gl=swiftshader")
+            chrome_options.add_argument("--disable-features=Vulkan")
 
             print('🌐 Connecting to browser...')
             self.driver = webdriver.Chrome(

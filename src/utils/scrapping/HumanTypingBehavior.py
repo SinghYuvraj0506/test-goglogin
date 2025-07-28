@@ -172,7 +172,18 @@ class HumanTypingBehavior:
         try:
             # Wait for element to be present and clickable
             wait = WebDriverWait(self.driver, 10)
-            target = wait.until(EC.element_to_be_clickable(element))
+
+            # Relocate and focus via JS each time to reduce DOM reactivity issues
+            def re_acquire_element():
+                if isinstance(element, tuple):
+                    return wait.until(EC.element_to_be_clickable(element))
+                return wait.until(EC.element_to_be_clickable((By.XPATH, element.get_attribute("xpath") if element else "//input")))
+                
+
+            target = re_acquire_element()
+
+            # Focus with JS - this helps in Instagram and Orbita headless
+            self.driver.execute_script("arguments[0].focus();", target)
             
             # Click on the element first
             target.click()
@@ -198,31 +209,39 @@ class HumanTypingBehavior:
                 try:
                     char = text[i]
                     previous_char = typed_text[-1] if typed_text else None
+
+                    # Check staleness proactively
+                    try:
+                        target.is_displayed()
+                    except StaleElementReferenceException:
+                        target = re_acquire_element()
+                        self.driver.execute_script("arguments[0].focus();", target)
+                        time.sleep(0.2)
                     
                     # Determine if we should make a typo
-                    # if self.should_make_typo(char, i, len(text)):
-                    #     # Make a typo
-                    #     typo_char = self.get_typo_char(char)
+                    if self.should_make_typo(char, i, len(text)):
+                        # Make a typo
+                        typo_char = self.get_typo_char(char)
                         
-                    #     if typo_char and typo_char.strip(): 
-                    #         # Type the typo
-                    #         target.send_keys(typo_char)
-                    #         typed_text += typo_char
+                        if typo_char and typo_char.strip(): 
+                            # Type the typo
+                            target.send_keys(typo_char)
+                            typed_text += typo_char
                             
-                    #         # Pause before realizing mistake
-                    #         correction_delay = random.uniform(0.3, 1.2)
-                    #         time.sleep(correction_delay)
+                            # Pause before realizing mistake
+                            correction_delay = random.uniform(0.3, 1.2)
+                            time.sleep(correction_delay)
                             
-                    #         # Correct the typo
-                    #         backspace_count = len(typo_char)
-                    #         for _ in range(backspace_count):
-                    #             target.send_keys(Keys.BACKSPACE)
+                            # Correct the typo
+                            backspace_count = len(typo_char)
+                            for _ in range(backspace_count):
+                                target.send_keys(Keys.BACKSPACE)
                             
-                    #         # Update typed_text
-                    #         typed_text = typed_text[:-backspace_count]
+                            # Update typed_text
+                            typed_text = typed_text[:-backspace_count]
                             
-                    #         # Small pause after correction
-                    #         time.sleep(random.uniform(0.1, 0.3))
+                            # Small pause after correction
+                            time.sleep(random.uniform(0.1, 0.3))
                     
 
                     # Type the correct character
@@ -248,12 +267,15 @@ class HumanTypingBehavior:
                     i += 1
                 except StaleElementReferenceException as e:
                     print("Stale error occured, resetting the element")
-                    target = wait.until(EC.element_to_be_clickable(element))
+                    target = re_acquire_element()
+                    continue
+                except Exception as e:
+                    print(f"[{i}] Unexpected typing error: {e}")
+                    target = re_acquire_element()
                     continue
             
             # Final pause after typing
             time.sleep(random.uniform(0.2, 0.8))
-            print("Typed text is", typed_text)
             return True
             
         except (TimeoutException, ElementNotInteractableException) as e:
@@ -324,3 +346,16 @@ class HumanTypingBehavior:
         if submit:
             time.sleep(random.uniform(0.3, 1.0))
             search_element.send_keys(Keys.RETURN)
+
+    
+    def paste_text(self, element, text):
+        self.driver.execute_script("""
+            const text = arguments[1];
+            const el = arguments[0];
+            el.focus();
+            el.value = text;
+            el.dispatchEvent(new Event('input', { bubbles: true }));
+            el.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true }));
+            el.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true }));
+            el.dispatchEvent(new KeyboardEvent('keypress', { bubbles: true }));
+        """, element, text)
