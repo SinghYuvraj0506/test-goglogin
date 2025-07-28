@@ -174,8 +174,8 @@ class MainExecutor:
             # Uncomment for messaging
             search_and_message_users(
                 self.driver, 
-                usernames_list=["ssinghyuvraj02","anjali.singh960"],
-                message_text="Hey bro whatsup ajsndn",
+                usernames_list=["ssinghyuvraj02","cristiano"],
+                message_text="Hey are you people",
                 observer=self.observer
             )
 
